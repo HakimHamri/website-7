@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Grader AI | Analitik</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --nav-bg:#0f172a; --ai-glow:#0ea5e9; --bg-body:#f8fafc; --text-main:#1e293b; }
+        body { background:var(--bg-body); font-family:Inter,Arial,sans-serif; color:var(--text-main); }
+        .navbar-custom { background:var(--nav-bg); padding:1rem 0; color:#fff; border-bottom:4px solid var(--ai-glow); }
+        .card { border:0; border-radius:18px; box-shadow:0 10px 16px rgba(0,0,0,.06); }
+        .metric { border-radius:16px; padding:20px; background:#fff; box-shadow:0 10px 16px rgba(0,0,0,.05); }
+    </style>
+</head>
+<body>
+<nav class="navbar-custom mb-4">
+    <div class="container d-flex justify-content-between align-items-center">
+        <div><a href="{{ url_for('dashboard') }}" class="text-white text-decoration-none me-3"><i class="fas fa-arrow-left me-1"></i> Kembali</a></div>
+        <h5 class="mb-0 fw-bold"><i class="fas fa-chart-pie me-2"></i>Analitik Prestasi Keseluruhan</h5>
+        <div class="d-flex gap-2 align-items-center">
+            <a href="{{ url_for('export_csv') }}" class="btn btn-sm btn-success rounded-pill"><i class="fas fa-file-csv me-1"></i> Export CSV</a>
+            <form action="{{ url_for('reset_analytics') }}" method="POST" onsubmit="return confirm('Adakah anda pasti mahu menetapkan semula (RESET) semua analitik? Semua data rakaman akan dipadamkan secara kekal.');">
+                <button type="submit" class="btn btn-sm btn-danger rounded-pill"><i class="fas fa-trash-alt me-1"></i> Reset Data</button>
+            </form>
+        </div>
+    </div>
+</nav>
+<div class="container pb-5">
+    <div class="row g-3 mb-4 text-center">
+        <div class="col-md-3"><div class="metric"><h3>{{ summary.total }}</h3><small class="text-muted">Jumlah Tugasan</small></div></div>
+        <div class="col-md-3"><div class="metric"><h3>{{ summary.average }}%</h3><small class="text-muted">Purata Markah</small></div></div>
+        <div class="col-md-3"><div class="metric"><h3>{{ summary.pass_rate }}%</h3><small class="text-muted">Kadar Lulus</small></div></div>
+        <div class="col-md-3"><div class="metric text-danger"><h3>{{ summary.high_similarity }}</h3><small class="text-muted">Kes Plagiarisme (&gt;70%)</small></div></div>
+    </div>
+    <div class="row g-4 mb-4">
+        <div class="col-md-6"><div class="card p-4"><h5>Taburan Gred Pelajar</h5><div style="height:260px"><canvas id="gradeChart"></canvas></div></div></div>
+        <div class="col-md-6">
+            <div class="card p-4 h-100">
+                <h5>Pelajar Skor Tertinggi 🏆</h5>
+                {% if summary.top_student %}
+                    <div class="my-auto text-center">
+                        <h2 class="display-4 fw-bold text-primary">{{ summary.top_student.score }}%</h2>
+                        <h5 class="fw-bold">{{ summary.top_student.student_name or 'N/A' }}</h5>
+                        <p class="text-muted mb-0">No Matrik: {{ summary.top_student.matrix_card }} | Gred: {{ summary.top_student.grade_letter }}</p>
+                    </div>
+                {% else %}
+                    <p class="text-muted my-auto text-center">Tiada rekod data tertinggi lagi.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="card p-4">
+        <h5>Senarai Semua Keputusan Rekod</h5>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Tarikh</th>
+                        <th>No Matrik</th>
+                        <th>Nama Pelajar</th>
+                        <th>Kategori</th>
+                        <th>Skor AI</th>
+                        <th>Gred</th>
+                        <th>Model AI</th> <th>Keunikan (Similarity)</th>
+                        <th>Blind Mode</th>
+                        <th class="text-center">Tindakan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for row in records %}
+                    <tr>
+                        <td><small>{{ row['created_at'] }}</small></td>
+                        <td><code>{{ row['matrix_card'] }}</code></td>
+                        <td>{{ row['student_name'] or 'Anonymous' }}</td>
+                        <td><span class="badge bg-secondary">{{ row['category'] }}</span></td>
+                        <td><strong>{{ row['score'] }}%</strong></td>
+                        <td><span class="badge rounded-pill text-bg-primary fs-6">{{ row['grade_letter'] }}</span></td>
+                        
+                        <td>
+                            <span class="text-secondary small">
+                                <i class="fas fa-robot me-1 text-info"></i><code>{{ row['model_used'] or 'gemini-2.0-flash' }}</code>
+                            </span>
+                        </td>
+                        
+                        <td>{% if row['similarity_score'] and row['similarity_score'] >= 70 %}<span class="text-danger fw-bold"><i class="fas fa-warning me-1"></i>{{ row['similarity_score'] }}%</span>{% else %}{{ row['similarity_score'] or 0 }}%{% endif %}</td>
+                        <td>{% if row['blind_mode'] %}<span class="badge text-bg-info">Yes</span>{% else %}<span class="text-muted">No</span>{% endif %}</td>
+                        <td class="text-center">
+                            <div class="d-flex gap-1 justify-content-center">
+                                <button type="button" class="btn btn-sm btn-outline-primary border-0" data-bs-toggle="modal" data-bs-target="#viewModal{{ row['id'] }}" title="Lihat Rujukan & Feedback">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                
+                                <form action="{{ url_for('delete_record', record_id=row['id']) }}" method="POST" onsubmit="return confirm('Adakah anda pasti mahu memadam rekod pelajar ini?');" style="display:inline;">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger border-0" title="Padam Rekod">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <div class="modal fade" id="viewModal{{ row['id'] }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                            <div class="modal-content text-start">
+                                <div class="modal-header">
+                                    <h5 class="modal-title fw-bold"><i class="fas fa-folder-open me-2 text-primary"></i>Rujukan Rekod: {{ row['student_name'] or 'Anonymous' }} ({{ row['matrix_card'] }})</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body bg-light">
+                                    <div class="card p-3 mb-3 border-0 shadow-sm">
+                                        <h6 class="fw-bold text-success"><i class="fas fa-comment-dots me-2"></i>Maklum Balas AI (AI Feedback)</h6>
+                                        <div class="p-3 rounded bg-white border text-dark" style="white-space: pre-wrap;"><small>{{ row['feedback'] or 'Tiada maklum balas dijana.' }}</small></div>
+                                    </div>
+                                    
+                                    <div class="card p-3 border-0 shadow-sm">
+                                        <h6 class="fw-bold text-primary"><i class="fas fa-file-alt me-2"></i>Kandungan Teks Asal (Original Content)</h6>
+                                        <div class="p-3 rounded bg-dark text-white font-monospace" style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;"><small>{{ row['original_content'] or 'Tiada kandungan rujukan disimpan.' }}</small></div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary btn-sm rounded-pill" data-bs-dismiss="modal">Tutup</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <tr><td colspan="10" class="text-center py-4 text-muted">Belum ada rekod.</td></tr> {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const gradeData={A:{{ stats['A'] }},B:{{ stats['B'] }},C:{{ stats['C'] }},D:{{ stats['D'] }},F:{{ stats['F'] }}};
+new Chart(document.getElementById('gradeChart'),{type:'bar',data:{labels:['A','B','C','D','F'],datasets:[{label:'Jumlah Pelajar',data:[gradeData.A,gradeData.B,gradeData.C,gradeData.D,gradeData.F],backgroundColor:['#10b981','#3b82f6','#f59e0b','#f97316','#ef4444'],borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+</script>
+</body>
+</html>

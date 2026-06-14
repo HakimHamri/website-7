@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Grader AI | Revolusi Pemarkahan</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root { 
+            --bg-void: #0a0f1d;
+            --card-surface: #111a2e;
+            --electric-cyan: #00f2fe;
+            --neon-glow: #4facfe;
+            --text-pure: #ffffff; 
+            --text-dim: #707f9d;
+            --border-glow: rgba(0, 242, 254, 0.15);
+        }
+
+        body {
+            background-color: var(--bg-void);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-pure);
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Latar Belakang Grid Dekorasi */
+        body::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: linear-gradient(rgba(0, 242, 254, 0.03) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 242, 254, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Sistem Animasi */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes floatIcon {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        .animate-fade-up {
+            opacity: 0;
+            animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .delay-1 { animation-delay: 0.15s; }
+        .delay-2 { animation-delay: 0.3s; }
+        .delay-3 { animation-delay: 0.45s; }
+
+        /* Reka Bentuk Elemen Hero */
+        .hero-container {
+            min-height: 85vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero-badge {
+            background: rgba(0, 242, 254, 0.07);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            color: var(--electric-cyan);
+            padding: 6px 16px;
+            border-radius: 100px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.1);
+        }
+
+        .headline-epic {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 3.8rem;
+            line-height: 1.15;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, #ffffff 30%, #a5b4fc 70%, var(--electric-cyan) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .text-lead {
+            color: var(--text-dim);
+            font-size: 1.15rem;
+            max-width: 740px;
+            margin: 0 auto;
+        }
+
+        /* Butang Interaktif */
+        .btn-nexus {
+            background: linear-gradient(135deg, var(--neon-glow) 0%, var(--electric-cyan) 100%);
+            color: #000;
+            font-weight: 700;
+            padding: 14px 32px;
+            border-radius: 12px;
+            border: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0, 242, 254, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .btn-nexus:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 242, 254, 0.5);
+            color: #000;
+        }
+
+        .btn-void-link {
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: var(--text-pure);
+            font-weight: 600;
+            padding: 14px 30px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-void-link:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.4);
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+        /* Matriks Kad Ciri (Features) */
+        .feature-card {
+            background: var(--card-surface);
+            border: 1px solid var(--border-glow);
+            border-radius: 20px;
+            padding: 40px 30px;
+            height: 100%;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(0, 242, 254, 0.4);
+            box-shadow: 0 15px 35px rgba(0, 242, 254, 0.08);
+        }
+
+        .icon-lumos {
+            font-size: 2.2rem;
+            margin-bottom: 24px;
+            display: inline-block;
+            animation: floatIcon 4s ease-in-out infinite;
+        }
+
+        .feature-card:nth-child(2) .icon-lumos {
+            animation-delay: 1s;
+        }
+        
+        .feature-card:nth-child(3) .icon-lumos {
+            animation-delay: 2s;
+        }
+
+        @media (max-width: 768px) {
+            .headline-epic { font-size: 2.5rem; }
+            .btn-nexus, .btn-void-link { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container hero-container">
+    <div class="row justify-content-center w-100">
+        <div class="col-lg-10">
+            
+            <div class="mb-4 animate-fade-up">
+                <span class="hero-badge">
+                    <i class="fa-solid fa-bolt-lightning"></i> AUTOMATED ASSIGNMENT GRADING WITH LARGE LANGUAGE MODELS
+                </span>
+            </div>
+
+            <h1 class="headline-epic mb-4 animate-fade-up delay-1">
+                Transformasi Penilaian Akademik ke<br>Era Kecerdasan Buatan (AI)
+            </h1>
+
+            <p class="text-lead mb-5 animate-fade-up delay-2">
+                Mengoptimumkan keupayaan Kecerdasan Buatan (AI) berasaskan Model Bahasa Besar (LLM) untuk melaksanakan pemarkahan Assignment secara automatik, telus, dan menyeluruh demi ekosistem akademik yang lebih efisien.            </p>
+
+            <div class="d-flex flex-wrap gap-3 justify-content-center animate-fade-up delay-3">
+                <a href="{{ url_for('dashboard') }}" class="btn-nexus">
+                    Mula Menilai Sekarang <i class="fa-solid fa-arrow-right"></i>
+                </a>
+                <a href="{{ url_for('analytics') }}" class="btn-void-link">
+                    <i class="fa-solid fa-chart-bar"></i> Lihat Dashboard Analitik
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <div class="row g-4 animate-fade-up delay-3">
+        <div class="col-md-4">
+            <div class="feature-card">
+                <div class="icon-lumos" style="color: var(--electric-cyan); text-shadow: 0 0 15px rgba(0, 242, 254, 0.5);">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                </div>
+                <h5 class="fw-bold text-white mb-3">Pemarkahan Tepat</h5>
+                <p class="text-dim small lh-lg">Kecerdasan Buatan (AI) akan menganalisis dan memberi markah dalam beberapa saat sahaja berdasarkan acuan rubrik anda.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card">
+                <div class="icon-lumos" style="color: #00ffa3; text-shadow: 0 0 15px rgba(0, 255, 163, 0.5);">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+                <h5 class="fw-bold text-white mb-3">Analitik Kelas</h5>
+                <p class="text-dim small lh-lg">Pantau prestasi keseluruhan pelajar dengan graf interaktif. Kenal pasti pelajar yang memerlukan bantuan dengan pantas.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card">
+                <div class="icon-lumos" style="color: #ff007f; text-shadow: 0 0 15px rgba(255, 0, 127, 0.5);">
+                    <i class="fa-solid fa-file-shield"></i>
+                </div>
+                <h5 class="fw-bold text-white mb-3">Laporan Lengkap</h5>
+                <p class="text-dim small lh-lg">Hasilkan ulasan membina secara automatik dan cetak laporan keputusan eksport PDF yang kemas dan profesional.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

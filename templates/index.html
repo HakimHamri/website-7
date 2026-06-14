@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Grader AI | Academic Intelligence</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --bg-body:#f8fafc; --bg-card:#fff; --text-main:#1e293b; --text-muted:#64748b; --border-color:#e2e8f0; --nav-bg:#0f172a; --primary-grad:linear-gradient(135deg,#0ea5e9 0%,#2563eb 100%); --ai-glow:#0ea5e9; }
+        [data-theme="dark"] { --bg-body:#0f172a; --bg-card:#1e293b; --text-main:#f8fafc; --text-muted:#94a3b8; --border-color:#334155; --nav-bg:#020617; --primary-grad:linear-gradient(135deg,#38bdf8 0%,#3b82f6 100%); --ai-glow:#38bdf8; }
+        body { background:var(--bg-body); color:var(--text-main); font-family:Inter,Arial,sans-serif; }
+        .navbar-custom { background:var(--nav-bg); padding:1rem 0; border-bottom:4px solid var(--ai-glow); }
+        .card { background:var(--bg-card); border:1px solid var(--border-color); border-radius:18px; box-shadow:0 10px 20px rgba(0,0,0,.05); }
+        .form-control,.form-select { background:var(--bg-body); border-color:var(--border-color); color:var(--text-main); }
+        .btn-grade { background:var(--primary-grad); color:#fff; font-weight:700; border:0; padding:13px; border-radius:12px; }
+        .btn-grade:hover { color:#fff; transform:translateY(-1px); }
+        .grade-circle { width:112px; height:112px; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; margin:0 auto; color:#fff; }
+        .drop-zone { border:2px dashed var(--ai-glow); border-radius:14px; padding:34px 18px; text-align:center; background:rgba(14,165,233,.06); cursor:pointer; }
+        .metric { border-radius:14px; padding:12px; background:var(--bg-body); border:1px solid var(--border-color); }
+        .progress { height:9px; background:rgba(148,163,184,.25); }
+        #aiLoader { display:none; position:fixed; inset:0; background:rgba(15,23,42,.95); z-index:9999; flex-direction:column; align-items:center; justify-content:center; }
+        .scanner { width:90px; height:110px; border:2px solid #e2e8f0; border-radius:10px; overflow:hidden; position:relative; }
+        .laser { position:absolute; height:3px; width:100%; background:#38bdf8; box-shadow:0 0 18px #38bdf8; animation:scan 1.4s infinite; }
+        @keyframes scan { from{top:0;opacity:.2} 50%{opacity:1} to{top:100%;opacity:.2} }
+        .dark-mode-toggle { cursor:pointer; font-size:1.2rem; }
+        @media print { nav, .no-print, form .col-lg-8 { display:none!important; } .col-lg-4 { width:100%!important; } body{background:#fff;} }
+    </style>
+</head>
+<body>
+<div id="aiLoader"><div class="scanner"><div class="laser"></div></div><h4 class="text-white fw-bold mt-3">AI sedang menilai tugasan...</h4></div>
+<nav class="navbar-custom mb-4">
+    <div class="container d-flex justify-content-between align-items-center">
+        <div><a href="{{ url_for('home') }}" class="text-white text-decoration-none me-3"><i class="fas fa-home me-1"></i> Utama</a><a href="{{ url_for('analytics') }}" class="btn btn-sm btn-outline-light rounded-pill"><i class="fas fa-chart-bar me-1"></i> Analitik</a></div>
+        <h5 class="mb-0 fw-bold text-white"><i class="fas fa-brain me-2"></i>Smart Grader AI</h5>
+        <div class="dark-mode-toggle text-white" onclick="toggleDarkMode()"><i class="fas fa-moon" id="themeIcon"></i></div>
+    </div>
+</nav>
+<div class="container pb-5">
+    <form action="{{ url_for('dashboard') }}" method="POST" enctype="multipart/form-data" onsubmit="showLoader()">
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="card p-4 mb-4">
+                    <h5 class="fw-bold mb-3" style="color:var(--ai-glow)"><i class="fas fa-user-shield me-2"></i>Maklumat & Mode Penilaian</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3"><label class="form-label small fw-bold text-muted">Nama Penuh</label><input type="text" name="student_name" class="form-control" placeholder="Nama Pelajar" value="{{ request.form.get('student_name','') }}"></div>
+                        <div class="col-md-6 mb-3"><label class="form-label small fw-bold text-muted">No. Kad Matrik</label><input type="text" name="matrix_card" class="form-control" placeholder="Contoh: D21A1234" value="{{ request.form.get('matrix_card','') }}"></div>
+                        <div class="col-md-6 mb-3"><label class="form-label small fw-bold text-muted">Kategori Tugasan</label><select name="category_id" id="taskCategory" class="form-select" required><option value="" disabled selected>-- Pilih --</option><option>Assignment</option><option>Lab Report</option><option>Essay</option><option>FYP Report</option><option>Reflection</option></select></div>
+                        <div class="col-md-6 mb-3"><label class="form-label small fw-bold text-muted"><i class="fas fa-robot me-1"></i>Pilihan Model AI (Choose Model Engine)</label>
+                            <select name="model_choice" class="form-select">
+                                <option value="gemini-2.5-flash" {% if request.form.get('model_choice') == 'gemini-2.5-flash' or not request.form.get('model_choice') %}selected{% endif %}>gemini-2.5-flash (Stable Production)</option>
+                                <option value="gemini-3.5-flash" {% if request.form.get('model_choice') == 'gemini-3.5-flash' %}selected{% endif %}>gemini-3.5-flash (Next-Gen Speed)</option>
+                                <option value="gpt-4" {% if request.form.get('model_choice') == 'gpt-4' %}selected{% endif %}>gpt-4 (High Intelligence)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12 mb-1 d-flex align-items-end"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="blind_mode" id="blindMode"><label class="form-check-label fw-bold" for="blindMode">Blind Grading Mode <span class="text-muted small">(kurangkan bias)</span></label></div></div>
+                    </div>
+                </div>
+                <div class="card p-4 mb-4">
+                    <h5 class="fw-bold mb-3" style="color:var(--ai-glow)"><i class="fas fa-file-upload me-2"></i>Kandungan Tugasan</h5>
+                    <ul class="nav nav-tabs mb-3" role="tablist"><li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#text-pane" type="button">✍️ Tampal Teks</button></li><li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#file-pane" type="button">📁 Batch Upload .txt</button></li></ul>
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="text-pane"><textarea name="content" class="form-control mb-3" rows="8" placeholder="Tampal jawapan pelajar di sini...">{{ request.form.get('content','') }}</textarea></div>
+                        <div class="tab-pane fade" id="file-pane"><div class="drop-zone mb-3" id="dropZone" onclick="document.getElementById('fileInput').click()"><i class="fas fa-cloud-upload-alt fa-3x mb-3" style="color:var(--ai-glow)"></i><h5>Seret & lepaskan banyak fail .txt</h5><p class="text-muted small mb-0">Batch grading: semua fail akan dinilai dan disimpan.</p><input type="file" name="assignment_file" id="fileInput" class="d-none" accept=".txt" multiple onchange="updateFileName(this)"></div><div id="fileNameDisplay" class="text-center text-success fw-bold small mb-3"></div></div>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between align-items-center mb-2"><label class="form-label small fw-bold text-muted mb-0">Rubrik Pemarkahan</label><button type="button" class="btn btn-sm btn-outline-primary rounded-pill" onclick="generateAIRubric()"><i class="fas fa-magic"></i> Jana Rubrik</button></div>
+                    <textarea id="rBox" name="rubric" class="form-control" rows="5" placeholder="Contoh: Content 40%, Critical Thinking 30%, Structure 15%, Language 15%">{{ request.form.get('rubric','') }}</textarea>
+                </div>
+                <div class="card p-4 mb-4">
+                    <h5 class="fw-bold mb-3" style="color:var(--ai-glow)"><i class="fas fa-user-edit me-2"></i>Manual Override Pensyarah</h5>
+                    <div class="row"><div class="col-md-4 mb-3"><label class="form-label small fw-bold text-muted">Final Score Optional</label><input type="number" name="final_score" min="0" max="100" class="form-control" placeholder="0-100"></div><div class="col-md-8 mb-3"><label class="form-label small fw-bold text-muted">Nota Manual</label><input type="text" name="manual_note" class="form-control" placeholder="Contoh: Markah dilaras selepas semakan pensyarah"></div></div>
+                </div>
+                <button type="submit" class="btn btn-grade w-100 py-3 shadow-sm no-print"><i class="fas fa-rocket me-2"></i>MULAKAN PENILAIAN AI</button>
+            </div>
+            <div class="col-lg-4">
+                <div class="card p-4 h-100">
+                    <h5 class="fw-bold mb-4 text-center">Hasil Penilaian</h5>
+                    {% if batch_results %}
+                        <div class="alert alert-success">{{ batch_results|length }} fail berjaya dinilai.</div>
+                        {% for item in batch_results %}<div class="metric mb-2"><div class="d-flex justify-content-between"><strong>{{ item.filename }}</strong><span class="badge text-bg-primary">{{ item.score }}%</span></div><small>Similarity: {{ item.similarity_score }}%</small></div>{% endfor %}
+                    {% elif final_data and grade %}
+                        <div class="text-center mb-4"><div class="grade-circle shadow" style="background-color:{{ grade.color }}"><span class="display-5 fw-bold">{{ grade.letter }}</span><small>{{ final_data.score }}%</small></div><h4 class="mt-3 fw-bold" style="color:{{ grade.color }}">{{ grade.label }}</h4></div>
+                        <div class="row g-2 mb-3"><div class="col-6"><div class="metric text-center"><strong>{{ final_data.similarity_score|default(0) }}%</strong><br><small>Similarity</small></div></div><div class="col-6"><div class="metric text-center"><strong>{{ final_data.writing_level|default('N/A') }}</strong><br><small>Level</small></div></div></div>
+                        {% if final_data.similarity_score and final_data.similarity_score >= 70 %}<div class="alert alert-warning small"><i class="fas fa-triangle-exclamation me-1"></i>Possible plagiarism with {{ final_data.similarity_with }}</div>{% endif %}
+                        <h6 class="fw-bold">Rubric Breakdown</h6>
+                        {% for key, value in final_data.rubric_breakdown.items() %}<div class="mb-2"><div class="d-flex justify-content-between small"><span>{{ key }}</span><strong>{{ value }}%</strong></div><div class="progress"><div class="progress-bar" style="width:{{ value }}%"></div></div></div>{% endfor %}
+                        <div class="p-3 rounded mt-3" style="background:var(--bg-body)"><strong style="color:var(--ai-glow)">Feedback</strong><p class="small mb-2">{{ final_data.feedback }}</p><strong>Strengths</strong><p class="small mb-2">{{ final_data.strengths }}</p><strong>Weaknesses</strong><p class="small mb-2">{{ final_data.weaknesses }}</p><strong>Suggestions</strong><p class="small mb-0">{{ final_data.suggestions }}</p></div>
+                        <button type="button" onclick="window.print()" class="btn btn-outline-secondary w-100 mt-4 rounded-pill no-print"><i class="fas fa-print me-2"></i>Cetak PDF</button>
+                    {% else %}
+                        <div class="text-center my-auto py-5 opacity-50"><i class="fas fa-robot fa-4x mb-3"></i><p class="small text-muted">Sistem sedia menerima data.</p></div>
+                    {% endif %}
+                    {% if error %}<div class="alert alert-danger mt-3 small text-center"><i class="fas fa-exclamation-triangle me-2"></i>{{ error }}</div>{% endif %}
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function showLoader(){document.getElementById('aiLoader').style.display='flex'}
+const dropZone=document.getElementById('dropZone');
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('dragover')});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('dragover');if(e.dataTransfer.files.length){document.getElementById('fileInput').files=e.dataTransfer.files;updateFileName(document.getElementById('fileInput'))}});
+function updateFileName(input){if(input.files.length){document.getElementById('fileNameDisplay').innerHTML=`<i class="fas fa-file-check me-1"></i> ${input.files.length} fail dipilih`}}
+function generateAIRubric(){const cat=document.getElementById('taskCategory').value,box=document.getElementById('rBox');if(!cat)return alert('Sila pilih kategori.');if(cat==='Lab Report')box.value='Methodology (30%)\nData Analysis (40%)\nConclusion (20%)\nLanguage (10%)';else if(cat==='FYP Report')box.value='Problem Statement (15%)\nLiterature Review (20%)\nMethodology (25%)\nSystem Implementation (25%)\nConclusion (15%)';else box.value='Content Accuracy (40%)\nCritical Thinking (30%)\nStructure (15%)\nLanguage & Grammar (15%)'}
+const htmlEl=document.documentElement,themeIcon=document.getElementById('themeIcon');function toggleDarkMode(){if(htmlEl.getAttribute('data-theme')==='dark'){htmlEl.removeAttribute('data-theme');themeIcon.className='fas fa-moon';localStorage.setItem('theme','light')}else{htmlEl.setAttribute('data-theme','dark');themeIcon.className='fas fa-sun';localStorage.setItem('theme','dark')}}if(localStorage.getItem('theme')==='dark'){htmlEl.setAttribute('data-theme','dark');themeIcon.className='fas fa-sun'}
+</script>
+</body>
+</html>
